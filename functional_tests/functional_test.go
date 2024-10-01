@@ -611,7 +611,9 @@ func testNodeJSTraces(t *testing.T) {
 		ptracetest.IgnoreResourceSpansOrder(),
 		ptracetest.IgnoreScopeSpansOrder(),
 	)
-
+	if err != nil && os.Getenv("UPDATE_EXPECTED_RESULTS") == "true" {
+		writeNewExpectedTracesResult(t, expectedTracesFile, selectedTrace)
+	}
 	require.NoError(t, err)
 }
 
@@ -639,7 +641,6 @@ func testJavaTraces(t *testing.T) {
 		}
 		return selectedTrace != nil
 	}, 3*time.Minute, 5*time.Second)
-
 	require.NotNil(t, selectedTrace)
 
 	maskScopeVersion(*selectedTrace)
@@ -674,7 +675,9 @@ func testJavaTraces(t *testing.T) {
 		ptracetest.IgnoreResourceSpansOrder(),
 		ptracetest.IgnoreScopeSpansOrder(),
 	)
-
+	if err != nil && os.Getenv("UPDATE_EXPECTED_RESULTS") == "true" {
+		writeNewExpectedTracesResult(t, expectedTracesFile, selectedTrace)
+	}
 	require.NoError(t, err)
 }
 
@@ -697,12 +700,10 @@ func testDotNetTraces(t *testing.T) {
 					selectedTrace = &trace
 					break
 				}
-				break
 			}
 		}
 		return selectedTrace != nil
 	}, 3*time.Minute, 5*time.Second)
-
 	require.NotNil(t, selectedTrace)
 
 	maskScopeVersion(*selectedTrace)
@@ -737,7 +738,9 @@ func testDotNetTraces(t *testing.T) {
 		ptracetest.IgnoreResourceSpansOrder(),
 		ptracetest.IgnoreScopeSpansOrder(),
 	)
-
+	if err != nil && os.Getenv("UPDATE_EXPECTED_RESULTS") == "true" {
+		writeNewExpectedTracesResult(t, expectedTracesFile, selectedTrace)
+	}
 	require.NoError(t, err)
 }
 
@@ -794,7 +797,7 @@ func testK8sClusterReceiverMetrics(t *testing.T) {
 
 	replaceWithStar := func(string) string { return "*" }
 
-	var selected *pmetric.Metrics
+	var selectedMetrics *pmetric.Metrics
 	for h := len(metricsConsumer.AllMetrics()) - 1; h >= 0; h-- {
 		m := metricsConsumer.AllMetrics()[h]
 		foundCorrectSet := false
@@ -814,16 +817,15 @@ func testK8sClusterReceiverMetrics(t *testing.T) {
 			continue
 		}
 		if m.ResourceMetrics().Len() == expectedMetrics.ResourceMetrics().Len() && m.MetricCount() == expectedMetrics.MetricCount() {
-			selected = &m
+			selectedMetrics = &m
 			break
 		}
 	}
-
-	require.NotNil(t, selected)
+	require.NotNil(t, selectedMetrics)
 
 	metricNames := []string{"k8s.node.condition_ready", "k8s.namespace.phase", "k8s.pod.phase", "k8s.replicaset.desired", "k8s.replicaset.available", "k8s.daemonset.ready_nodes", "k8s.daemonset.misscheduled_nodes", "k8s.daemonset.desired_scheduled_nodes", "k8s.daemonset.current_scheduled_nodes", "k8s.container.ready", "k8s.container.memory_request", "k8s.container.memory_limit", "k8s.container.cpu_request", "k8s.container.cpu_limit", "k8s.deployment.desired", "k8s.deployment.available", "k8s.container.restarts", "k8s.container.cpu_request", "k8s.container.memory_request", "k8s.container.memory_limit"}
 
-	err = pmetrictest.CompareMetrics(expectedMetrics, *selected,
+	err = pmetrictest.CompareMetrics(expectedMetrics, *selectedMetrics,
 		pmetrictest.IgnoreTimestamp(),
 		pmetrictest.IgnoreStartTimestamp(),
 		pmetrictest.IgnoreMetricAttributeValue("container.id", metricNames...),
@@ -859,7 +861,9 @@ func testK8sClusterReceiverMetrics(t *testing.T) {
 		pmetrictest.IgnoreMetricDataPointsOrder(),
 		pmetrictest.IgnoreSubsequentDataPoints("k8s.container.ready", "k8s.container.restarts"),
 	)
-
+	if err != nil && os.Getenv("UPDATE_EXPECTED_RESULTS") == "true" {
+		writeNewExpectedMetricsResult(t, expectedMetricsFile, selectedMetrics)
+	}
 	require.NoError(t, err)
 }
 
@@ -1109,12 +1113,13 @@ func testAgentMetrics(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedInternalMetrics, err := golden.ReadMetrics(filepath.Join(testDir, expectedValuesDir, "expected_internal_metrics.yaml"))
+	expectedInternalMetricsFile := filepath.Join(testDir, expectedValuesDir, "expected_internal_metrics.yaml")
+	expectedInternalMetrics, err := golden.ReadMetrics(expectedInternalMetricsFile)
 	require.NoError(t, err)
 
 	replaceWithStar := func(string) string { return "*" }
 
-	selectedInternalMetrics := selectMetricSet(expectedInternalMetrics, "otelcol_process_runtime_total_alloc_bytes", agentMetricsConsumer, false)
+	selectedInternalMetrics := selectMetricSet(expectedInternalMetrics, "otelcol_process_runtime_total_alloc_bytes", agentMetricsConsumer, true)
 	if selectedInternalMetrics == nil {
 		t.Skip("No metric batch identified with the right metric count, exiting")
 		return
@@ -1127,8 +1132,8 @@ func testAgentMetrics(t *testing.T) {
 		pmetrictest.IgnoreMetricAttributeValue("container.id", metricNames...),
 		pmetrictest.IgnoreMetricAttributeValue("k8s.daemonset.uid", metricNames...),
 		pmetrictest.IgnoreMetricAttributeValue("k8s.deployment.uid", metricNames...),
-		pmetrictest.IgnoreMetricAttributeValue("k8s.pod.uid", metricNames...),
-		pmetrictest.IgnoreMetricAttributeValue("k8s.pod.name", metricNames...),
+		pmetrictest.IgnoreMetricAttributeValue("k8s.pod.uid"),
+		pmetrictest.IgnoreMetricAttributeValue("k8s.pod.name"),
 		pmetrictest.IgnoreMetricAttributeValue("k8s.replicaset.uid", metricNames...),
 		pmetrictest.IgnoreMetricAttributeValue("k8s.replicaset.name", metricNames...),
 		pmetrictest.IgnoreMetricAttributeValue("k8s.namespace.uid", metricNames...),
@@ -1136,11 +1141,11 @@ func testAgentMetrics(t *testing.T) {
 		pmetrictest.IgnoreMetricAttributeValue("container.image.tag", metricNames...),
 		pmetrictest.IgnoreMetricAttributeValue("k8s.node.uid", metricNames...),
 		pmetrictest.IgnoreMetricAttributeValue("net.host.name", metricNames...),
-		pmetrictest.IgnoreMetricAttributeValue("service.instance.id", metricNames...),
-		pmetrictest.IgnoreMetricAttributeValue("service_instance_id", metricNames...),
+		pmetrictest.IgnoreMetricAttributeValue("service.instance.id"),
+		pmetrictest.IgnoreMetricAttributeValue("service_instance_id"),
 		pmetrictest.IgnoreMetricAttributeValue("service_version", metricNames...),
 		pmetrictest.IgnoreMetricAttributeValue("receiver", metricNames...),
-		pmetrictest.IgnoreMetricValues(metricNames...),
+		pmetrictest.IgnoreMetricValues(),
 		pmetrictest.ChangeResourceAttributeValue("k8s.deployment.name", shortenNames),
 		pmetrictest.ChangeResourceAttributeValue("k8s.pod.name", shortenNames),
 		pmetrictest.ChangeResourceAttributeValue("k8s.replicaset.name", shortenNames),
@@ -1161,10 +1166,15 @@ func testAgentMetrics(t *testing.T) {
 		pmetrictest.IgnoreMetricsOrder(),
 		pmetrictest.IgnoreScopeMetricsOrder(),
 		pmetrictest.IgnoreMetricDataPointsOrder(),
+		pmetrictest.IgnoreSubsequentDataPoints("otelcol_receiver_accepted_log_records", "otelcol_receiver_refused_log_records"),
 	)
+	if err != nil && os.Getenv("UPDATE_EXPECTED_RESULTS") == "true" {
+		writeNewExpectedMetricsResult(t, expectedInternalMetricsFile, selectedInternalMetrics)
+	}
 	assert.NoError(t, err)
 
-	expectedKubeletStatsMetrics, err := golden.ReadMetrics(filepath.Join(testDir, expectedValuesDir, "expected_kubeletstats_metrics.yaml"))
+	expectedKubeletStatsMetricsFile := filepath.Join(testDir, expectedValuesDir, "expected_kubeletstats_metrics.yaml")
+	expectedKubeletStatsMetrics, err := golden.ReadMetrics(expectedKubeletStatsMetricsFile)
 	require.NoError(t, err)
 	selectedKubeletstatsMetrics := selectMetricSet(expectedKubeletStatsMetrics, "container.memory.usage", agentMetricsConsumer, false)
 	if selectedKubeletstatsMetrics == nil {
@@ -1172,6 +1182,7 @@ func testAgentMetrics(t *testing.T) {
 		return
 	}
 	require.NotNil(t, selectedKubeletstatsMetrics)
+
 	err = pmetrictest.CompareMetrics(expectedKubeletStatsMetrics, *selectedKubeletstatsMetrics,
 		pmetrictest.IgnoreTimestamp(),
 		pmetrictest.IgnoreStartTimestamp(),
@@ -1211,11 +1222,10 @@ func testAgentMetrics(t *testing.T) {
 		pmetrictest.IgnoreScopeMetricsOrder(),
 		pmetrictest.IgnoreMetricDataPointsOrder(),
 	)
-	if err != nil {
-		t.Skipf("we have trouble identifying exact payloads right now: %v", err)
-	} else {
-		assert.NoError(t, err)
+	if err != nil && os.Getenv("UPDATE_EXPECTED_RESULTS") == "true" {
+		writeNewExpectedMetricsResult(t, expectedKubeletStatsMetricsFile, selectedKubeletstatsMetrics)
 	}
+	assert.NoError(t, err)
 }
 
 func testPrometheusAnnotationMetrics(t *testing.T) {

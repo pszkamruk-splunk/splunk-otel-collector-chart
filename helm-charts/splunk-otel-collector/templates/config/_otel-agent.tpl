@@ -9,12 +9,18 @@ extensions:
   {{- if and (eq (include "splunk-otel-collector.logsEnabled" .) "true") (eq .Values.logsEngine "otel") }}
   file_storage:
     directory: {{ .Values.logsCollection.checkpointPath }}
+    {{- if not (eq (toString .Values.splunkPlatform.fsyncEnabled) "<nil>") }}
+    fsync: {{ .Values.splunkPlatform.fsyncEnabled }}
+    {{- end }}
   {{- end }}
 
   {{- if .Values.splunkPlatform.sendingQueue.persistentQueue.enabled }}
   file_storage/persistent_queue:
     directory: {{ .Values.splunkPlatform.sendingQueue.persistentQueue.storagePath }}/agent
     timeout: 0
+    {{- if not (eq (toString .Values.splunkPlatform.fsyncEnabled) "<nil>") }}
+    fsync: {{ .Values.splunkPlatform.fsyncEnabled }}
+    {{- end }}
   {{- end }}
 
 
@@ -34,12 +40,18 @@ receivers:
     endpoint: 0.0.0.0:8006
   {{- end }}
 
+  # Placeholder receiver needed for discovery mode
+  nop:
+
   # Prometheus receiver scraping metrics from the pod itself
   {{- include "splunk-otel-collector.prometheusInternalMetrics" "agent" | nindent 2}}
 
   {{- if (eq (include "splunk-otel-collector.metricsEnabled" .) "true") }}
   hostmetrics:
     collection_interval: 10s
+    {{- if not .Values.isWindows }}
+    root_path: "/hostfs"
+    {{- end }}
     scrapers:
       cpu:
       disk:
@@ -661,6 +673,8 @@ processors:
   {{- include "splunk-otel-collector.otelMemoryLimiterConfig" . | nindent 2 }}
 
   batch:
+    metadata_keys:
+      - X-SF-Token
 
   # Resource detection processor is configured to override all host and cloud
   # attributes because OTel Collector Agent is the source of truth for all host
@@ -814,6 +828,12 @@ exporters:
     access_token: ${SPLUNK_OBSERVABILITY_ACCESS_TOKEN}
     send_otlp_histograms: true
   {{- end }}
+
+  # To send entities (applicable only if discovery mode is enabled)
+  otlphttp/entities:
+    logs_endpoint: {{ include "splunk-otel-collector.o11yIngestUrl" . }}/v3/event
+    headers:
+      "X-SF-Token": ${SPLUNK_OBSERVABILITY_ACCESS_TOKEN}
 
 service:
   telemetry:
@@ -1047,6 +1067,12 @@ service:
       exporters:
         - signalfx/histograms
     {{- end }}
+
+    logs/entities:
+      # Receivers are added dinamically if discovery mode is enabled
+      receivers: [nop]
+      processors: [memory_limiter, batch, resourcedetection]
+      exporters: [otlphttp/entities]
 {{- end }}
 {{/*
 Discovery properties for the otel-collector agent
