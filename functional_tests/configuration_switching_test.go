@@ -38,7 +38,7 @@ const (
 	hecReceiverPort        = 8090
 	hecMetricsReceiverPort = 8091
 	apiPort                = 8881
-	testDir                = "testdata"
+	testDir                = "testdata_configuration_switching"
 	valuesDir              = "values"
 )
 
