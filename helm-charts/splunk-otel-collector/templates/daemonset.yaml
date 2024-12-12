@@ -191,7 +191,8 @@ spec:
               mountPath: /var/lib/docker/containers
             {{- end }}
             {{- if .Values.logsCollection.journald.enabled }}
-            - name: journaldlogs
+{{/*            - name: journaldlogs*/}}
+            - name: host-journal
               mountPath: {{ .Values.logsCollection.journald.directory }}
             {{- end }}
             {{- if .Values.splunkPlatform.sendingQueue.persistentQueue.enabled }}
@@ -366,6 +367,9 @@ spec:
         - mountPath: /hostfs/var/run/utmp
           name: host-var-run-utmp
           readOnly: true
+        - mountPath: /hostfs/var/log/journal
+          name: host-journal
+          readOnly: true
         {{- end }}
         {{- end }}
         {{- if or .Values.splunkPlatform.clientCert .Values.splunkPlatform.clientKey .Values.splunkPlatform.caFile }}
@@ -403,11 +407,11 @@ spec:
         - name: persistent-queue
           mountPath: {{ .Values.splunkPlatform.sendingQueue.persistentQueue.storagePath }}/agent
         {{- end }}
-        {{- if .Values.logsCollection.journald.enabled }}
-        - mountPath: {{.Values.logsCollection.journald.directory}}
-          name: journaldlogs
-          readOnly: true
-        {{- end }}
+{{/*        {{- if .Values.logsCollection.journald.enabled }}*/}}
+{{/*        - mountPath: {{.Values.logsCollection.journald.directory}}*/}}
+{{/*          name: journaldlogs*/}}
+{{/*          readOnly: true*/}}
+{{/*        {{- end }}*/}}
         {{- end }}
         - mountPath: /usr/lib/splunk-otel-collector/agent-bundle/run/collectd
           name: run-collectd
@@ -500,7 +504,8 @@ spec:
           type: DirectoryOrCreate
       {{- end }}
       {{- if .Values.logsCollection.journald.enabled }}
-      - name: journaldlogs
+{{/*      - name: journaldlogs*/}}
+      - name: host-journal
         hostPath:
           path: {{.Values.logsCollection.journald.directory}}
       {{- end}}
