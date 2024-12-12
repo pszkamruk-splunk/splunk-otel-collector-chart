@@ -32,15 +32,6 @@ data:
         send_batch_max_size: 32768
       k8sattributes/clusterReceiver:
         extract:
-          annotations:
-          - from: pod
-            key: splunk.com/sourcetype
-          - from: namespace
-            key: splunk.com/index
-            tag_name: com.splunk.index
-          - from: pod
-            key: splunk.com/index
-            tag_name: com.splunk.index
           metadata:
           - k8s.namespace.name
           - k8s.node.name
