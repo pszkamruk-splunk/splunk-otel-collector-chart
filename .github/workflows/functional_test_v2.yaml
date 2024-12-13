@@ -2,10 +2,8 @@ name: functional-tests
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
-      - local-refactoring-removing-env-variables
+#  push:
+#    branches: [ main ]
   workflow_dispatch:
     inputs:
       UPDATE_EXPECTED_RESULTS:
