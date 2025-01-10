@@ -269,12 +269,12 @@ func testIndexSwitch(t *testing.T) {
 		var indices []string
 		logs := agentLogsConsumer.AllLogs()
 		sourcetypes, indices = getLogsIndexAndSourceType(logs)
-		assert.True(t, len(sourcetypes) > 1) // we are receiving logs from different containers
+		assert.GreaterThan(t, len(sourcetypes), 1) // we are receiving logs from different containers
 		// check sourcetypes have same prefix
 		prefix := "kube:container:"
 		for _, element := range sourcetypes {
 			if !strings.HasPrefix(element, prefix) {
-				t.Errorf("Element does not start with the prefix '%s': %s", prefix, element)
+				t.Errorf("Element does not start with the prefix %q: %s", prefix, element)
 			}
 		}
 		assert.NotContains(t, sourcetypes, nonDefaultSourcetype)
