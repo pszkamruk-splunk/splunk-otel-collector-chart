@@ -349,7 +349,7 @@ func testClusterReceiverEnabledOrDisabled(t *testing.T) {
 }
 
 func testVerifyResourceAttributes(t *testing.T) {
-	attributesList := [4]string{"k8s.node.name", "k8s.pod.name", "k8s.pod.uid", "k8s.namespace.name"}
+	attributesList := [5]string{"k8s.node.name", "k8s.pod.name", "k8s.pod.uid", "k8s.namespace.name", "k8s.pod.ip"}
 
 	hostEp := hostEndpoint(t)
 	if len(hostEp) == 0 {
@@ -367,7 +367,7 @@ func testVerifyResourceAttributes(t *testing.T) {
 		}
 		deployChartsAndApps(t, valuesFileName, replacements)
 		resetLogsSink(t, logsObjectsConsumer)
-		waitForLogs(t, 5, logsObjectsConsumer)
+		waitForLogs(t, 10, logsObjectsConsumer)
 		t.Logf("===> >>>> Logs: %v", len(logsObjectsConsumer.AllLogs()))
 
 		for _, attr := range attributesList {
@@ -563,7 +563,7 @@ func getMetricsResourceAttribute(metrics []pmetric.Metrics, attributeName string
 		// agent metrics
 		"system.", "k8s.node.",
 		// cluster receiver metrics
-		"k8s.deployment.", "k8s.namespace.", "k8s.replicaset.", "k8s.daemonset.", "k8s.node.",
+		"k8s.deployment.", "k8s.namespace.", "k8s.replicaset.", "k8s.daemonset.",
 	}
 
 	for i := 0; i < len(metrics); i++ {
