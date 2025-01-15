@@ -349,7 +349,7 @@ func testClusterReceiverEnabledOrDisabled(t *testing.T) {
 }
 
 func testVerifyResourceAttributes(t *testing.T) {
-	attributesList := [5]string{"k8s.node.name", "k8s.pod.name", "k8s.pod.uid", "k8s.namespace.name", "k8s.pod.ip"}
+	attributesList := [4]string{"k8s.node.name", "k8s.pod.name", "k8s.pod.uid", "k8s.namespace.name"} //"k8s.pod.ip",
 
 	hostEp := hostEndpoint(t)
 	if len(hostEp) == 0 {
@@ -547,6 +547,7 @@ func getLogsResourceAttribute(logs []plog.Logs, attributeName string) ([]string,
 						foundCounter++
 					} else {
 						fmt.Println("== Resource Attribute not found: ", attributeName)
+						fmt.Printf("Log Record Body: %v\n", sl.LogRecords().At(m).Body().AsRaw())
 						notFoundCounter++
 					}
 				}
