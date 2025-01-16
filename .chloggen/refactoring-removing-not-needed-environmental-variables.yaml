@@ -6,7 +6,7 @@ component: clusterReceiver
 note: clusterReceiver refactor by removing unnecessary environmental variables after introducing the k8sAttributesProcessor to clusterReceiver, and improve the configuration for the metrics k8sAttributesProcessor
 
 # One or more tracking issues related to the change
-issues: []
+issues: [1540]
 # (Optional) One or more lines of additional information to render under the primary note.
 # These lines will be padded with 2 spaces and then inserted directly into the document.
 # Use pipe (|) for multiline entries.
