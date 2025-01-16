@@ -91,6 +91,15 @@ spec:
           image: public.ecr.aws/amazonlinux/amazonlinux:latest
           imagePullPolicy: IfNotPresent
           command: ["bash", "-c", "/splunk-scripts/init-eks-fargate-cluster-receiver.sh"]
+          env:
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           volumeMounts:
             - name: init-eks-fargate-cluster-receiver-script
               mountPath: /splunk-scripts
@@ -123,6 +132,10 @@ spec:
         env:
           - name: SPLUNK_MEMORY_TOTAL_MIB
             value: "{{ include "splunk-otel-collector.convertMemToMib" $clusterReceiver.resources.limits.memory | int64 }}"
+          - name: K8S_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
           {{- if (eq (include "splunk-otel-collector.splunkO11yEnabled" .) "true") }}
           - name: SPLUNK_OBSERVABILITY_ACCESS_TOKEN
             valueFrom:
