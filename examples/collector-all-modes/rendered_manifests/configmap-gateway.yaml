@@ -161,7 +161,7 @@ data:
             scrape_interval: 10s
             static_configs:
             - targets:
-              - ${K8S_POD_IP}:8889
+              - localhost:8889
       signalfx:
         access_token_passthrough: true
         endpoint: 0.0.0.0:9943
@@ -205,6 +205,7 @@ data:
         traces:
           exporters:
           - otlphttp
+          - signalfx
           processors:
           - memory_limiter
           - k8sattributes
@@ -216,4 +217,9 @@ data:
           - zipkin
       telemetry:
         metrics:
-          address: 0.0.0.0:8889
+          readers:
+          - pull:
+              exporter:
+                prometheus:
+                  host: localhost
+                  port: 8889

@@ -137,7 +137,12 @@ exporters:
 service:
   telemetry:
     metrics:
-      address: 0.0.0.0:8889
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: localhost
+                port: 8889
   extensions:
     - health_check
     - zpages
@@ -171,6 +176,7 @@ service:
       exporters:
         {{- if (eq (include "splunk-otel-collector.o11yTracesEnabled" .) "true") }}
         - otlphttp
+        - signalfx
         {{- end }}
         {{- if (eq (include "splunk-otel-collector.platformTracesEnabled" .) "true") }}
         - splunk_hec/platform_traces

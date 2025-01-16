@@ -6,8 +6,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
     inputs:
-      UPDATE_EXPECTED_RESULTS:
-        description: 'Set this to true to update expected results and collect updated test output as a Github workflow artifact.'
+      UPLOAD_UPDATED_EXPECTED_RESULTS:
+        description: 'Set this to true to upload updated golden file expected results and upload these results as a Github workflow artifact.'
+        required: false
+        default: false
+      UPLOAD_KUBERNETES_DEBUG_INFO:
+        description: 'Set this to true to collect the debug info of the k8s cluster and upload this info as a Github workflow artifact.'
         required: false
         default: false
 
@@ -20,7 +24,8 @@ jobs:
     env:
       KUBECONFIG: /tmp/kube-config-splunk-otel-collector-chart-functional-testing
       KUBE_TEST_ENV: kind
-      UPDATE_EXPECTED_RESULTS: ${{ github.event.inputs.UPDATE_EXPECTED_RESULTS || 'false' }}
+      UPLOAD_UPDATED_EXPECTED_RESULTS: ${{ github.event.inputs.UPLOAD_UPDATED_EXPECTED_RESULTS || 'false' }}
+      UPLOAD_KUBERNETES_DEBUG_INFO: ${{ github.event.inputs.UPLOAD_KUBERNETES_DEBUG_INFO || 'false' }}
     strategy:
       fail-fast: false
       matrix:
@@ -55,7 +60,7 @@ jobs:
             ~/go/pkg/mod
           key: go-cache-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
       - name: Create kind cluster
-        uses: helm/kind-action@v1.10.0
+        uses: helm/kind-action@v1.12.0
         with:
           node_image: kindest/node:${{ matrix.k8s-version }}
           kubectl_version: ${{ matrix.k8s-version }}
@@ -71,13 +76,28 @@ jobs:
         run: |
           make cert-manager
       - name: run functional tests
+        id: run-functional-tests
         env:
           K8S_VERSION: ${{ matrix.k8s-version }}
         run: |
           cd functional_tests
-          TEARDOWN_BEFORE_SETUP=true UPDATE_EXPECTED_RESULTS=${{ env.UPDATE_EXPECTED_RESULTS }} go test -v -tags ${{ matrix.test-job }}
-      - name: 'Upload test results'
-        if: always() && env.UPDATE_EXPECTED_RESULTS == 'true'
+          TEARDOWN_BEFORE_SETUP=true UPDATE_EXPECTED_RESULTS=${{ env.UPLOAD_UPDATED_EXPECTED_RESULTS }} go test -v -tags ${{ matrix.test-job }}
+      - name: Collect Kubernetes Cluster debug info on failure
+        if: always() && (steps.run-functional-tests.outcome == 'failure' || env.UPLOAD_KUBERNETES_DEBUG_INFO == 'true')
+        id: collect-debug-info
+        run: |
+          echo "Functional tests failed. Collecting debug info for current state of the Kubernetes cluster..."
+          cd tools
+          ./splunk_kubernetes_debug_info.sh
+      - name: Upload Kubernetes Cluster debug info
+        if: always() && (steps.run-functional-tests.outcome == 'failure' || env.UPLOAD_KUBERNETES_DEBUG_INFO == 'true')
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s-debug-info-${{ matrix.test-job }}-${{ matrix.k8s-version }}
+          path: tools/splunk_kubernetes_debug_info_*
+          retention-days: 5
+      - name: Upload test results
+        if: always() && env.UPLOAD_UPDATED_EXPECTED_RESULTS == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: functional_tests-${{ matrix.test-job }}-${{ matrix.k8s-version }}
@@ -204,6 +224,68 @@ jobs:
           cd functional_tests
           go test -v -tags functional
 
+  eks-upgrade-from-release-test:
+    name: Test helm upgrade from release in EKS - credentials needed
+    needs: kubernetes-test
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    concurrency:
+      group: eks-access
+    env:
+      KUBECONFIG: /tmp/kube-config-splunk-otel-collector-chart-functional-testing-eks
+      KUBE_TEST_ENV: eks
+      SKIP_TESTS: "true" # we need to skip functional tests as we have not set probes to listen to the traffic.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout old release
+        uses: actions/checkout@v4
+        with:
+          path: base
+          ref: splunk-otel-collector-0.109.0
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ~1.21.8
+          cache: false
+      - name: Cache Go
+        id: go-cache
+        timeout-minutes: 5
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/bin
+            ~/go/pkg/mod
+          key: go-cache-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET }}
+          aws-region: us-west-1
+      - name: Install kubeconfig
+        run: |
+          aws eks update-kubeconfig --name rotel-eks --region us-west-1
+      - name: Update dependencies
+        run: |
+          cd base && make dep-update
+      - name: Deploy cert-manager
+        run: |
+          cd base && make cert-manager
+      - name: Deploy previous version of the chart
+        run: |
+          cd base && helm install sock helm-charts/splunk-otel-collector --set cloudProvider=aws --set distribution=eks --set splunkObservability.realm=us0 --set splunkObservability.accessToken=xxxxx --set operator.enabled=true --set environment=dev
+      - name: Update dependencies
+        run: |
+          make dep-update
+      - name: Deploy cert-manager
+        run: |
+          make cert-manager
+      - name: run functional tests
+        env:
+          HOST_ENDPOINT: 0.0.0.0
+        run: |
+          cd functional_tests
+          go test -v -tags functional
   gke-autopilot-test:
     name: Test helm install in GKE/Autopilot - credentials needed
     needs: kubernetes-test
@@ -400,7 +482,6 @@ jobs:
         env:
           GCE_KUBECONFIG: ${{ secrets.GCE_KUBECONFIG }}
       - name: run functional tests
-        uses: mobiledevops/secret-to-file-action@v1
         env:
           HOST_ENDPOINT: 0.0.0.0
           KUBECONFIG: /tmp/kubeconfig
