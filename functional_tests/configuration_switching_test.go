@@ -269,7 +269,7 @@ func testIndexSwitch(t *testing.T) {
 		var indices []string
 		logs := agentLogsConsumer.AllLogs()
 		sourcetypes, indices = getLogsIndexAndSourceType(logs)
-		assert.GreaterThan(t, len(sourcetypes), 1) // we are receiving logs from different containers
+		assert.Greater(t, len(sourcetypes), 1) // we are receiving logs from different containers
 		// check sourcetypes have same prefix
 		prefix := "kube:container:"
 		for _, element := range sourcetypes {
