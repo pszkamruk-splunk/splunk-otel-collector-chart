@@ -930,14 +930,14 @@ func testAgentLogs(t *testing.T) {
 		assert.Contains(tt, sourcetypes, "sourcetype-anno") // pod-wo-index-w-ns-index has a sourcetype annotation
 	}, 3*time.Minute, 5*time.Second)
 
-	if strings.HasPrefix(os.Getenv("K8S_VERSION"), "v1.30") {
-		t.Log("Skipping test for journald sourcetypes for cluster version 1.30")
-	} else {
-		t.Run("test journald sourcetypes are set", func(t *testing.T) {
-			assert.Contains(t, journalDsourceTypes, "kube:journald:containerd.service")
-			assert.Contains(t, journalDsourceTypes, "kube:journald:kubelet.service")
-		})
-	}
+	//if strings.HasPrefix(os.Getenv("K8S_VERSION"), "v1.30") {
+	//	t.Log("Skipping test for journald sourcetypes for cluster version 1.30")
+	//} else {
+	t.Run("test journald sourcetypes are set", func(t *testing.T) {
+		assert.Contains(t, journalDsourceTypes, "kube:journald:containerd.service")
+		assert.Contains(t, journalDsourceTypes, "kube:journald:kubelet.service")
+	})
+	//}
 	t.Run("test node.js log records", func(t *testing.T) {
 		assert.NotNil(t, helloWorldLogRecord)
 		sourceType, ok := helloWorldResource.Attributes().Get("com.splunk.sourcetype")
