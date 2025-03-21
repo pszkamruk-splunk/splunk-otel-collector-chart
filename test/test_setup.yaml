@@ -19,14 +19,14 @@ metadata:
   annotations:
     splunk.com/index: ns-anno
     splunk.com/exclude: "true"
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: default
-  annotations:
-    splunk.com/metricsIndex: test_metrics
-    splunk.com/sourcetype: sourcetype-anno
+#---
+#apiVersion: v1
+#kind: Namespace
+#metadata:
+#  name: default
+#  annotations:
+#    splunk.com/metricsIndex: test_metrics
+#    splunk.com/sourcetype: sourcetype-anno
 ---
 apiVersion: batch/v1
 kind: Job
