@@ -44,6 +44,8 @@ jobs:
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       SPLUNK_VERSION: ${{ matrix.splunk_version }}
       MINIKUBE_VERSION: latest
+      KUBECONFIG: ~/.kube/config
+
 
     steps:
       - name: Checkout
