@@ -5,7 +5,6 @@ package internal
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -181,7 +180,7 @@ func AnnotateNamespace(t *testing.T, clientset *kubernetes.Clientset, name, key,
 }
 
 func WaitForTerminatingPods(t *testing.T, clientset *kubernetes.Clientset, namespace string) {
-	for {
+	require.Eventually(t, func() bool {
 		pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 		require.NoError(t, err)
 
@@ -190,18 +189,36 @@ func WaitForTerminatingPods(t *testing.T, clientset *kubernetes.Clientset, names
 			if pod.Status.Phase == v1.PodRunning || pod.Status.Phase == v1.PodPending {
 				continue
 			}
-
 			// Check if the pod is terminating
 			if pod.DeletionTimestamp != nil {
 				terminatingPods++
 			}
 		}
 
-		if terminatingPods == 0 {
-			break
-		}
+		return terminatingPods == 0
+	}, 2*time.Minute, 5*time.Second, "there are still terminating pods after 2 minutes")
 
-		fmt.Printf("Waiting for %d terminating pod(s) to disappear...\n", terminatingPods)
-		time.Sleep(5 * time.Second)
-	}
+	//for {
+	//	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	//	require.NoError(t, err)
+	//
+	//	terminatingPods := 0
+	//	for _, pod := range pods.Items {
+	//		if pod.Status.Phase == v1.PodRunning || pod.Status.Phase == v1.PodPending {
+	//			continue
+	//		}
+	//
+	//		// Check if the pod is terminating
+	//		if pod.DeletionTimestamp != nil {
+	//			terminatingPods++
+	//		}
+	//	}
+	//
+	//	if terminatingPods == 0 {
+	//		break
+	//	}
+	//
+	//	fmt.Printf("Waiting for %d terminating pod(s) to disappear...\n", terminatingPods)
+	//	time.Sleep(5 * time.Second)
+	//}
 }
