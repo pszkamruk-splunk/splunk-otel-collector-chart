@@ -5,6 +5,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -177,4 +178,30 @@ func AnnotateNamespace(t *testing.T, clientset *kubernetes.Clientset, name, key,
 	ns.Annotations[key] = value
 	_, err = clientset.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 	require.NoError(t, err)
+}
+
+func WaitForTerminatingPods(t *testing.T, clientset *kubernetes.Clientset, namespace string) {
+	for {
+		pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+		require.NoError(t, err)
+
+		terminatingPods := 0
+		for _, pod := range pods.Items {
+			if pod.Status.Phase == v1.PodRunning || pod.Status.Phase == v1.PodPending {
+				continue
+			}
+
+			// Check if the pod is terminating
+			if pod.DeletionTimestamp != nil {
+				terminatingPods++
+			}
+		}
+
+		if terminatingPods == 0 {
+			break
+		}
+
+		fmt.Printf("Waiting for %d terminating pod(s) to disappear...\n", terminatingPods)
+		time.Sleep(5 * time.Second)
+	}
 }
