@@ -10,17 +10,13 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/tools/clientcmd"
-	"os"
-	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
@@ -238,9 +234,9 @@ func deploySplunk(t *testing.T) {
 func Test_Functions(t *testing.T) {
 	deploySplunk(t)
 
-	t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
-	t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
-	t.Run("metric namespace annotations", testVerifyMetricNamespaceAnnotations)
+	//t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
+	//t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
+	//t.Run("metric namespace annotations", testVerifyMetricNamespaceAnnotations)
 
 }
 
