@@ -100,6 +100,8 @@ func testVerifyMetricNamespaceAnnotations(t *testing.T) {
 	annotationIndex := "test_metrics"
 	annotationSourcetype := "annotation_sourcetype"
 
+	client := createK8sClient(t)
+
 	tests := []struct {
 		name                      string
 		annotationIndexValue      string
@@ -112,7 +114,7 @@ func testVerifyMetricNamespaceAnnotations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			addNamespaceAnnotation(t, namespace, tt.annotationIndexValue, tt.annotationSourcetypeValue)
+			addNamespaceAnnotation(t, client, namespace, tt.annotationIndexValue, tt.annotationSourcetypeValue)
 			time.Sleep(20 * time.Second)
 
 			// Check metrics are being send to proper index and sourcetype
@@ -131,41 +133,38 @@ func testVerifyMetricNamespaceAnnotations(t *testing.T) {
 			fmt.Println(" =========>  Events received: ", len(events))
 			assert.Greater(t, len(events), 1)
 
-			removeAllNamespaceAnnotations(t, namespace)
+			removeAllNamespaceAnnotations(t, client, namespace)
 		})
 	}
 }
 
-func removeAllNamespaceAnnotations(t *testing.T, namespace_name string) {
+func createK8sClient(t *testing.T) *kubernetes.Clientset {
 	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
 	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
 	require.NoError(t, err)
 	client, err := kubernetes.NewForConfig(kubeConfig)
 	require.NoError(t, err)
+	return client
+}
 
-	ns, err := client.CoreV1().Namespaces().Get(context.TODO(), namespace_name, metav1.GetOptions{})
+func removeAllNamespaceAnnotations(t *testing.T, clientset *kubernetes.Clientset, namespace_name string) {
+	// get namespace
+	ns, err := clientset.CoreV1().Namespaces().Get(context.TODO(), namespace_name, metav1.GetOptions{})
 	require.NoError(t, err)
 	// Clear all annotations
 	ns.Annotations = make(map[string]string)
 
 	// Update the namespace
-	_, err = client.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
+	_, err = clientset.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	fmt.Printf("All annotations removed from namespace_name %s\n", namespace_name)
 }
 
-func addNamespaceAnnotation(t *testing.T, namespace_name string, annotationIndex string, annotationSourcetype string) {
-	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
-	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
-	require.NoError(t, err)
-	client, err := kubernetes.NewForConfig(kubeConfig)
-	require.NoError(t, err)
-
+func addNamespaceAnnotation(t *testing.T, clientset *kubernetes.Clientset, namespace_name string, annotationIndex string, annotationSourcetype string) {
 	// get namespace
-	ns, err := client.CoreV1().Namespaces().Get(context.TODO(), namespace_name, metav1.GetOptions{})
+	ns, err := clientset.CoreV1().Namespaces().Get(context.TODO(), namespace_name, metav1.GetOptions{})
 	require.NoError(t, err)
 	if ns.Annotations == nil {
 		ns.Annotations = make(map[string]string)
@@ -178,7 +177,7 @@ func addNamespaceAnnotation(t *testing.T, namespace_name string, annotationIndex
 	}
 
 	// Update annotations
-	_, err = client.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
+	_, err = clientset.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	fmt.Printf("Annotation added to namespace_name %s\n", namespace_name)
 }
