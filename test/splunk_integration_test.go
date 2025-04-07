@@ -234,9 +234,9 @@ func deploySplunk(t *testing.T) {
 func Test_Functions(t *testing.T) {
 	deploySplunk(t)
 
-	//t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
-	//t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
-	//t.Run("metric namespace annotations", testVerifyMetricNamespaceAnnotations)
+	t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
+	t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
+	t.Run("metric namespace annotations", testVerifyMetricNamespaceAnnotations)
 
 }
 
