@@ -234,8 +234,8 @@ func deploySockConnector(t *testing.T, valuesFileName string) {
 	//if len(hostEp) == 0 {
 	//	require.Fail(t, "Host endpoint not found")
 	//}
-	fmt.Println("Host Endpoint: ", os.Getenv("CI_SPLUNK_HOST"))
-	fmt.Println("Splunk HEC : ", os.Getenv("CI_SPLUNK_HEC_TOKEN"))
+	fmt.Println(" Host Endpoint: ", os.Getenv("CI_SPLUNK_HOST"))
+	fmt.Println(" Splunk HEC : ", os.Getenv("CI_SPLUNK_HEC_TOKEN"))
 	replacements := map[string]interface{}{
 		"SplunkHecEndpoint": fmt.Sprintf("https://%s:%d/services/collector", os.Getenv("CI_SPLUNK_HOST"), SplunkHECPort),
 		"SplunkHecToken":    os.Getenv("CI_SPLUNK_HEC_TOKEN"),
