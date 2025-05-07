@@ -34,23 +34,34 @@ const (
 	// Splunk Search Query related constants
 	eventSearchQueryString  = "| search "
 	metricSearchQueryString = "| mpreview "
+
+	SplunkHECPort = 8088
 )
 
 func Test_Functions(t *testing.T) {
 	//testRecallYaml := "./testdata/test_recall.yaml"
 
-	//splunkYaml := "./testdata/k8s-splunk.yml"
-	//deploySplunk(t, splunkYaml)
+	splunkYaml := "./testdata/k8s-splunk.yml"
+	deploySplunk(t, splunkYaml)
+	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
+	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
+	config, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
+	require.NoError(t, err)
+	clientset, err := kubernetes.NewForConfig(config)
+	require.NoError(t, err)
+	internal.CheckPodsReady(t, clientset, internal.Namespace, "app=splunk", 3*time.Minute)
 
-	connectorValuesYaml := "sck_otel_values.yaml"
+	connectorValuesYaml := "sck_otel_values_no_comments.yaml.tmpl"
 	deploySockConnector(t, connectorValuesYaml)
 
-	//logGeneratorsYamlFile := "./testdata/test_setup.yaml"
-	//deployLogGenerators(t, logGeneratorsYamlFile)
+	logGeneratorsYamlFile := "./testdata/test_setup.yaml"
+	deployLogGenerators(t, logGeneratorsYamlFile)
+	// wait for 60 seconds for the logs to be ingested
+	time.Sleep(60 * time.Second)
 
-	//t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
-	//t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
-	//t.Run("metric namespace annotations", testVerifyMetricNamespaceAnnotations)
+	t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
+	t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
+	t.Run("metric namespace annotations", testVerifyMetricNamespaceAnnotations)
 
 }
 
@@ -218,13 +229,18 @@ func deploySockConnector(t *testing.T, valuesFileName string) {
 	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
 	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
 
-	hostEp := internal.HostEndpoint(t)
-	if len(hostEp) == 0 {
-		require.Fail(t, "Host endpoint not found")
-	}
+	//hostEp := internal.HostEndpoint(t)
+	//hostEp := "localhost"
+	//if len(hostEp) == 0 {
+	//	require.Fail(t, "Host endpoint not found")
+	//}
+	fmt.Println("Host Endpoint: ", os.Getenv("CI_SPLUNK_HOST"))
+	fmt.Println("Splunk HEC : ", os.Getenv("CI_SPLUNK_HEC_TOKEN"))
 	replacements := map[string]interface{}{
-		"LogHecEndpoint":    fmt.Sprintf("http://%s:%d", hostEp, internal.HECLogsReceiverPort),
-		"MetricHecEndpoint": fmt.Sprintf("http://%s:%d/services/collector", hostEp, internal.HECMetricsReceiverPort),
+		"SplunkHecEndpoint": fmt.Sprintf("https://%s:%d/services/collector", os.Getenv("CI_SPLUNK_HOST"), SplunkHECPort),
+		"SplunkHecToken":    os.Getenv("CI_SPLUNK_HEC_TOKEN"),
+		//"SplunkHecEndpoint": fmt.Sprintf("https://%s:%d/services/collector", "10.202.2.58", SplunkHECPort),
+		//"SplunkHecToken":    fmt.Sprintf("02abcfde-3583-409d-8c66-458ef648fb00"),
 	}
 	//for k, v := range repl {
 	//	replacements[k] = v

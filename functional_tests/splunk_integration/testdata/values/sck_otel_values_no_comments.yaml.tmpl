@@ -1,0 +1,69 @@
+---
+splunkPlatform:
+  endpoint: {{ .SplunkHecEndpoint }}
+  token: {{ .SplunkHecToken }}
+  index: "ci_events"
+  metricsIndex: "ci_metrics"
+  source: "kubernetes"
+  sourcetype:
+  maxConnections: 200
+  disableCompression: true
+  timeout: 10s
+  insecureSkipVerify: true
+  logsEnabled: true
+  metricsEnabled: true
+
+logsEngine: otel
+
+clusterName: "functional-test"
+
+agent:
+  controlPlaneEnabled: true
+
+extraAttributes:
+  fromAnnotations:
+    - key: splunk.com/customField
+      tag_name: customField
+  fromLabels:
+    - key: app
+      from: pod
+    - key: app
+      from: namespace
+
+  custom:
+   - name: "cluster_name"
+     value: "ci-k8s-cluster"
+   - name: "customfield1"
+     value: "customvalue1"
+   - name: "customfield2"
+     value: "customvalue2"
+
+logsCollection:
+  journald:
+    enabled: true
+    directory: /run/log/journal
+    units:
+      - name: kubelet
+        priority: info
+      - name: docker
+        priority: info
+      - name: containerd
+        priority: info
+    index: ""
+
+clusterReceiver:
+  enabled: true
+
+  k8sObjects:
+    - name: pods
+    - name: namespaces
+    - name: nodes
+    - name: events
+      mode: watch
+
+gateway:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 300m
+      memory: 300Mi
