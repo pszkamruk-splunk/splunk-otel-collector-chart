@@ -103,7 +103,6 @@ jobs:
 
       - name: Run Splunk Integration Tests
         run: |
-#          export CI_SPLUNK_HOST=$(kubectl get pod splunk --template={{.status.podIP}})
           cd functional_tests/splunk_integration
           go test -v -tags splunk_integration
 
