@@ -33,6 +33,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.get-test-matrix.outputs.matrix) }}
     env:
+      CI_SPLUNK_HOST: "test-splunk"
       CI_SPLUNK_PORT: 8089
       CI_SPLUNK_USERNAME: admin
       CI_SPLUNK_HEC_TOKEN: "00000000-0000-0000-0000-0000000000000"
@@ -102,7 +103,7 @@ jobs:
 
       - name: Run Splunk Integration Tests
         run: |
-          export CI_SPLUNK_HOST=$(kubectl get pod splunk --template={{.status.podIP}})
+#          export CI_SPLUNK_HOST=$(kubectl get pod splunk --template={{.status.podIP}})
           cd functional_tests/splunk_integration
           go test -v -tags splunk_integration
 
