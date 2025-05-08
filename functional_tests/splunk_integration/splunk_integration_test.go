@@ -229,22 +229,12 @@ func deploySockConnector(t *testing.T, valuesFileName string) {
 	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
 	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
 
-	//hostEp := internal.HostEndpoint(t)
-	//hostEp := "localhost"
-	//if len(hostEp) == 0 {
-	//	require.Fail(t, "Host endpoint not found")
-	//}
 	fmt.Println(" Host Endpoint: ", os.Getenv("CI_SPLUNK_HOST"))
 	fmt.Println(" Splunk HEC : ", os.Getenv("CI_SPLUNK_HEC_TOKEN"))
 	replacements := map[string]interface{}{
 		"SplunkHecEndpoint": fmt.Sprintf("https://%s:%d/services/collector", os.Getenv("CI_SPLUNK_HOST"), SplunkHECPort),
 		"SplunkHecToken":    os.Getenv("CI_SPLUNK_HEC_TOKEN"),
-		//"SplunkHecEndpoint": fmt.Sprintf("https://%s:%d/services/collector", "10.202.2.58", SplunkHECPort),
-		//"SplunkHecToken":    fmt.Sprintf("02abcfde-3583-409d-8c66-458ef648fb00"),
 	}
-	//for k, v := range repl {
-	//	replacements[k] = v
-	//}
 
 	valuesFile, err := filepath.Abs(filepath.Join(testDir, valuesDir, valuesFileName))
 	require.NoError(t, err)
