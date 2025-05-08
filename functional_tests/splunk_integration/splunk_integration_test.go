@@ -46,7 +46,9 @@ func Test_Functions(t *testing.T) {
 
 	splunkIpAddr := getPodIpAddress(t, "splunk")
 	err := os.Setenv("CI_SPLUNK_HOST", splunkIpAddr)
+	require.NoError(t, err)
 	fmt.Printf("Splunk Pod IP Address: %s\n", splunkIpAddr)
+	fmt.Println(" Host Endpoint - get env: ", os.Getenv("CI_SPLUNK_HOST"))
 
 	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
 	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
@@ -217,6 +219,10 @@ func deploySplunk(t *testing.T, yaml_file_name string) {
 	// Deploy Splunk
 	fmt.Println("Deploying Splunk")
 	installK8sResources(t, yaml_file_name)
+	clientset := createK8sClient(t)
+	fmt.Println("waiting for splunk pods to be ready")
+	internal.CheckPodsReady(t, clientset, "default", "app=splunk", 3*time.Minute)
+	fmt.Println("done")
 }
 
 func deploySockConnector(t *testing.T, valuesFileName string) {
