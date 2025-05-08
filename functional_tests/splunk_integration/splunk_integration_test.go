@@ -43,6 +43,10 @@ func Test_Functions(t *testing.T) {
 
 	splunkYaml := "./testdata/k8s-splunk.yml"
 	deploySplunk(t, splunkYaml)
+
+	splunkIpAddr := getPodIpAddress(t, "splunk")
+	fmt.Printf("Splunk Pod IP Address: %s\n", splunkIpAddr)
+
 	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
 	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
 	config, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
@@ -221,6 +225,7 @@ func deploySockConnector(t *testing.T, valuesFileName string) {
 	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
 
 	fmt.Println(" Host Endpoint: ", os.Getenv("CI_SPLUNK_HOST"))
+	fmt.Println(" Host Endpoint: ", getPodIpAddress(t, "splunk"))
 	fmt.Println(" Splunk HEC : ", os.Getenv("CI_SPLUNK_HEC_TOKEN"))
 	replacements := map[string]interface{}{
 		"SplunkHecEndpoint": fmt.Sprintf("https://%s:%d/services/collector", os.Getenv("CI_SPLUNK_HOST"), SplunkHECPort),
@@ -345,4 +350,19 @@ func installK8sResources(t *testing.T, configFileName string) {
 	}
 
 	fmt.Println("Resource applied successfully!")
+}
+
+func getPodIpAddress(t *testing.T, podName string) string {
+	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
+	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
+	require.NoError(t, err)
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
+	require.NoError(t, err)
+
+	pod, err := clientset.CoreV1().Pods("default").Get(context.TODO(), podName, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	fmt.Printf("Pod IP Address: %s\n", pod.Status.PodIP)
+	return pod.Status.PodIP
 }
