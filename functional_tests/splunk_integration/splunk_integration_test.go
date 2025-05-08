@@ -64,7 +64,7 @@ func Test_Functions(t *testing.T) {
 	logGeneratorsYamlFile := "./testdata/test_setup.yaml"
 	deployLogGenerators(t, logGeneratorsYamlFile)
 	// wait for 60 seconds for the logs to be ingested
-	time.Sleep(60 * time.Second)
+	time.Sleep(120 * time.Second)
 
 	t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
 	t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
