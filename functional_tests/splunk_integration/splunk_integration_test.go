@@ -62,11 +62,9 @@ func Test_Functions(t *testing.T) {
 	t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
 	t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
 	t.Run("metric namespace annotations", testVerifyMetricNamespaceAnnotations)
-
 }
 
 func testVerifyLogsIngestionUsingAnnotations(t *testing.T) {
-
 	tests := []struct {
 		name               string
 		label              string
@@ -91,8 +89,8 @@ func testVerifyLogsIngestionUsingAnnotations(t *testing.T) {
 		})
 	}
 }
-func testVerifyCustomMetadataFieldsAnnotations(t *testing.T) {
 
+func testVerifyCustomMetadataFieldsAnnotations(t *testing.T) {
 	tests := []struct {
 		name               string
 		label              string
@@ -152,7 +150,6 @@ func testVerifyMetricNamespaceAnnotations(t *testing.T) {
 			addNamespaceAnnotation(t, client, namespace, tt.annotationIndexValue, tt.annotationSourcetypeValue)
 			time.Sleep(20 * time.Second)
 
-			// Check metrics are being send to proper index and sourcetype
 			index := defaultIndex
 			if tt.annotationIndexValue != "" {
 				index = tt.annotationIndexValue
@@ -184,21 +181,16 @@ func createK8sClient(t *testing.T) *kubernetes.Clientset {
 }
 
 func removeAllNamespaceAnnotations(t *testing.T, clientset *kubernetes.Clientset, namespace_name string) {
-	// get namespace
 	ns, err := clientset.CoreV1().Namespaces().Get(context.TODO(), namespace_name, metav1.GetOptions{})
 	require.NoError(t, err)
-	// Clear all annotations
 	ns.Annotations = make(map[string]string)
 
-	// Update the namespace
 	_, err = clientset.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 	require.NoError(t, err)
-
 	fmt.Printf("All annotations removed from namespace_name %s\n", namespace_name)
 }
 
 func addNamespaceAnnotation(t *testing.T, clientset *kubernetes.Clientset, namespace_name string, annotationIndex string, annotationSourcetype string) {
-	// get namespace
 	ns, err := clientset.CoreV1().Namespaces().Get(context.TODO(), namespace_name, metav1.GetOptions{})
 	require.NoError(t, err)
 	if ns.Annotations == nil {
@@ -211,7 +203,6 @@ func addNamespaceAnnotation(t *testing.T, clientset *kubernetes.Clientset, names
 		ns.Annotations["splunk.com/sourcetype"] = annotationSourcetype
 	}
 
-	// Update annotations
 	_, err = clientset.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	fmt.Printf("Annotation added to namespace_name %s\n", namespace_name)
