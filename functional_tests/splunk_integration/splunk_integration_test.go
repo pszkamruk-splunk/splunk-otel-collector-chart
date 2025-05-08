@@ -45,6 +45,7 @@ func Test_Functions(t *testing.T) {
 	deploySplunk(t, splunkYaml)
 
 	splunkIpAddr := getPodIpAddress(t, "splunk")
+	err := os.Setenv("CI_SPLUNK_HOST", splunkIpAddr)
 	fmt.Printf("Splunk Pod IP Address: %s\n", splunkIpAddr)
 
 	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
@@ -225,7 +226,7 @@ func deploySockConnector(t *testing.T, valuesFileName string) {
 	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
 
 	fmt.Println(" Host Endpoint: ", os.Getenv("CI_SPLUNK_HOST"))
-	fmt.Println(" Host Endpoint: ", getPodIpAddress(t, "splunk"))
+	//fmt.Println(" Host Endpoint: ", getPodIpAddress(t, "splunk"))
 	fmt.Println(" Splunk HEC : ", os.Getenv("CI_SPLUNK_HEC_TOKEN"))
 	replacements := map[string]interface{}{
 		"SplunkHecEndpoint": fmt.Sprintf("https://%s:%d/services/collector", os.Getenv("CI_SPLUNK_HOST"), SplunkHECPort),
