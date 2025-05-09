@@ -15,9 +15,11 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
@@ -25,7 +27,6 @@ import (
 	"time"
 
 	"github.com/signalfx/splunk-otel-collector-chart/functional_tests/internal"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -41,10 +42,11 @@ const (
 
 func Test_Functions(t *testing.T) {
 	//testRecallYaml := "./testdata/test_recall.yaml"
+	clientset := createK8sClient(t)
 
 	splunkYaml := "./testdata/k8s-splunk.yml"
 	deploySplunk(t, splunkYaml)
-
+	internal.CheckPodsReady(t, clientset, internal.Namespace, "app=splunk", 3*time.Minute)
 	splunkIpAddr := getPodIpAddress(t, "splunk")
 	err := os.Setenv("CI_SPLUNK_HOST", splunkIpAddr)
 	require.NoError(t, err)
@@ -57,16 +59,19 @@ func Test_Functions(t *testing.T) {
 	//require.NoError(t, err)
 	//clientset, err := kubernetes.NewForConfig(config)
 	//require.NoError(t, err)
-	clientset := createK8sClient(t)
-	internal.CheckPodsReady(t, clientset, internal.Namespace, "app=splunk", 3*time.Minute)
 
 	connectorValuesYaml := "sck_otel_values_no_comments.yaml.tmpl"
 	deploySockConnector(t, connectorValuesYaml)
 
 	logGeneratorsYamlFile := "./testdata/test_setup.yaml"
 	deployLogGenerators(t, logGeneratorsYamlFile)
+	fmt.Println("Waiting for log generators jobs to complete")
+	namespaceWithTestingJobs := [3]string{"ns-w-exclude", "ns-w-index", "ns-wo-index"}
+	for _, ns := range namespaceWithTestingJobs {
+		waitForJobsToComplete(t, clientset, ns)
+	}
 	// wait for 60 seconds for the logs to be ingested
-	time.Sleep(120 * time.Second)
+	//time.Sleep(120 * time.Second)
 
 	t.Run("verify log ingestion by using annotations", testVerifyLogsIngestionUsingAnnotations)
 	t.Run("custom metadata fields annotations", testVerifyCustomMetadataFieldsAnnotations)
@@ -388,4 +393,21 @@ func getPodIpAddress(t *testing.T, podName string) string {
 
 	fmt.Printf("Pod IP Address: %s\n", pod.Status.PodIP)
 	return pod.Status.PodIP
+}
+
+func waitForJobsToComplete(t *testing.T, clientset *kubernetes.Clientset, namespace string) {
+	jobs, err := clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
+	require.NoError(t, err)
+	for _, job := range jobs.Items {
+		err = wait.PollImmediate(5*time.Second, 10*time.Minute, func() (bool, error) {
+			job, err := clientset.BatchV1().Jobs(namespace).Get(context.TODO(), job.Name, metav1.GetOptions{})
+			require.NoError(t, err)
+			if job.Status.Succeeded > 0 {
+				return true, nil
+			}
+			return false, nil
+		})
+		require.NoError(t, err)
+		fmt.Printf("Job %s completed successfully\n", job.Name)
+	}
 }
