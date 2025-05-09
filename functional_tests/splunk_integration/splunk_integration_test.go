@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/signalfx/splunk-otel-collector-chart/functional_tests/internal"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -50,12 +51,13 @@ func Test_Functions(t *testing.T) {
 	fmt.Printf("Splunk Pod IP Address: %s\n", splunkIpAddr)
 	fmt.Println(" Host Endpoint - get env: ", os.Getenv("CI_SPLUNK_HOST"))
 
-	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
-	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
-	config, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
-	require.NoError(t, err)
-	clientset, err := kubernetes.NewForConfig(config)
-	require.NoError(t, err)
+	//testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
+	//require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
+	//config, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
+	//require.NoError(t, err)
+	//clientset, err := kubernetes.NewForConfig(config)
+	//require.NoError(t, err)
+	clientset := createK8sClient(t)
 	internal.CheckPodsReady(t, clientset, internal.Namespace, "app=splunk", 3*time.Minute)
 
 	connectorValuesYaml := "sck_otel_values_no_comments.yaml.tmpl"
@@ -178,13 +180,25 @@ func testVerifyMetricNamespaceAnnotations(t *testing.T) {
 }
 
 func createK8sClient(t *testing.T) *kubernetes.Clientset {
+	kubeConfig := getKubeConfig(t)
+	client, err := kubernetes.NewForConfig(kubeConfig)
+	require.NoError(t, err)
+	return client
+}
+
+func createDynamicK8sClient(t *testing.T) *dynamic.DynamicClient {
+	kubeConfig := getKubeConfig(t)
+	client, err := dynamic.NewForConfig(kubeConfig)
+	require.NoError(t, err)
+	return client
+}
+
+func getKubeConfig(t *testing.T) *rest.Config {
 	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
 	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
 	require.NoError(t, err)
-	client, err := kubernetes.NewForConfig(kubeConfig)
-	require.NoError(t, err)
-	return client
+	return kubeConfig
 }
 
 func removeAllNamespaceAnnotations(t *testing.T, clientset *kubernetes.Clientset, namespace_name string) {
@@ -218,7 +232,7 @@ func addNamespaceAnnotation(t *testing.T, clientset *kubernetes.Clientset, names
 func deploySplunk(t *testing.T, yaml_file_name string) {
 	// Deploy Splunk
 	fmt.Println("Deploying Splunk")
-	installK8sResources(t, yaml_file_name)
+	installK8sWorkloadResources(t, yaml_file_name)
 	clientset := createK8sClient(t)
 	fmt.Println("waiting for splunk pods to be ready")
 	internal.CheckPodsReady(t, clientset, "default", "app=splunk", 3*time.Minute)
@@ -258,16 +272,17 @@ func deploySockConnector(t *testing.T, valuesFileName string) {
 func deployLogGenerators(t *testing.T, configFileName string) {
 	// Deploy log generators
 	fmt.Println("Deploying log generators")
-	installK8sResources(t, configFileName)
+	installK8sWorkloadResources(t, configFileName)
 }
 
-func installK8sResources(t *testing.T, configFileName string) {
-	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
-	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
-	require.NoError(t, err)
-	client, err := dynamic.NewForConfig(kubeConfig)
-	require.NoError(t, err)
+func installK8sWorkloadResources(t *testing.T, configFileName string) {
+	//testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
+	//require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
+	//kubeConfig, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
+	//require.NoError(t, err)
+	//client, err := dynamic.NewForConfig(kubeConfig)
+	//require.NoError(t, err)
+	client := createDynamicK8sClient(t)
 
 	file, err := os.Open(configFileName)
 	if err != nil {
@@ -360,12 +375,13 @@ func installK8sResources(t *testing.T, configFileName string) {
 }
 
 func getPodIpAddress(t *testing.T, podName string) string {
-	testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
-	require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
-	require.NoError(t, err)
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	require.NoError(t, err)
+	//testKubeConfig, setKubeConfig := os.LookupEnv("KUBECONFIG")
+	//require.True(t, setKubeConfig, "the environment variable KUBECONFIG must be set")
+	//kubeConfig, err := clientcmd.BuildConfigFromFlags("", testKubeConfig)
+	//require.NoError(t, err)
+	//clientset, err := kubernetes.NewForConfig(kubeConfig)
+	//require.NoError(t, err)
+	clientset := createK8sClient(t)
 
 	pod, err := clientset.CoreV1().Pods("default").Get(context.TODO(), podName, metav1.GetOptions{})
 	require.NoError(t, err)
