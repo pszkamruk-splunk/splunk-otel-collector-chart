@@ -54,10 +54,6 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: '**/go.sum'
 
-#      # Leave this here for debugging
-#      - name: Setup upterm session
-#        uses: lhotari/action-upterm@v1
-
       - name: Setup Minikube
         run: |
           # Install Kubectl
@@ -78,39 +74,25 @@ jobs:
           done
           echo "Kubernetes $(kubectl version --short | grep -E 'Client|Server')" && echo "Container Runtime for Node: $(kubectl get node -o=jsonpath='{.items[0].metadata.name}'): $(kubectl get node -o=jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}')"
 
-      - name: Install Splunk
-        run: |
           # Wait until default service account is created
           until kubectl -n default get serviceaccount default -o name; do
             sleep 1;
           done
-          # set splunk version, hec_token, splunk password in k8s-splunk.yaml file
-          sed -i "s/splunk:9.3.0/splunk:${SPLUNK_VERSION}/g" ci_scripts/k8s-splunk.yml
-          sed -i "s/value: helloworld/value: ${CI_SPLUNK_PASSWORD}/g" ci_scripts/k8s-splunk.yml
-          sed -i "s/value: 00000000-0000-0000-0000-0000000000000/value: ${CI_SPLUNK_HEC_TOKEN}/g" ci_scripts/k8s-splunk.yml
-          cat ci_scripts/k8s-splunk.yml
-          # Install Splunk on minikube
-          kubectl apply -f ci_scripts/k8s-splunk.yml
-          # Wait until splunk is ready
-          until kubectl logs splunk --tail=2 | grep -q 'Ansible playbook complete'; do
-            sleep 1;
-          done
 
-      - name: Deploy splunk-otel-collector chart
+      - name: Prepare Splunk yaml file
+        run: |
+          # set splunk version, hec_token, splunk password in k8s-splunk.yaml file
+          sed -i "s/splunk:9.3.0/splunk:${SPLUNK_VERSION}/g" functional_tests/splunk_integration/testdata/k8s-splunk.yml
+          sed -i "s/value: helloworld/value: ${CI_SPLUNK_PASSWORD}/g" functional_tests/splunk_integration/testdata/k8s-splunk.yml
+          sed -i "s/value: 00000000-0000-0000-0000-0000000000000/value: ${CI_SPLUNK_HEC_TOKEN}/g" functional_tests/splunk_integration/testdata/k8s-splunk.yml
+
+      - name: Update dependencies
         run: |
           make dep-update
-          export CI_SPLUNK_HOST=$(kubectl get pod splunk --template={{.status.podIP}})
-          ci_scripts/deploy_collector.sh
-
-      - name: Deploy log generator
-        run: |
-          kubectl apply -f test/test_setup.yaml
-          sleep 60
 
       - name: Run Splunk Integration Tests
         run: |
-          export CI_SPLUNK_HOST=$(kubectl get pod splunk --template={{.status.podIP}})
-          cd test
+          cd functional_tests/splunk_integration
           go test -v -tags splunk_integration
 
       - name: Print splunk-otel-collector logs
