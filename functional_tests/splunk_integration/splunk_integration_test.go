@@ -8,9 +8,12 @@ package splunk_integration
 import (
 	"context"
 	"fmt"
+	"github.com/signalfx/splunk-otel-collector-chart/functional_tests/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+	"io"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -23,10 +26,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
-
-	"github.com/signalfx/splunk-otel-collector-chart/functional_tests/internal"
 )
 
 const (
@@ -47,6 +49,7 @@ func Test_Functions(t *testing.T) {
 	splunkYaml := "./testdata/k8s-splunk.yml"
 	deploySplunk(t, splunkYaml)
 	internal.CheckPodsReady(t, clientset, internal.Namespace, "app=splunk", 3*time.Minute)
+	waitForSplunkToBeReady(t, clientset, internal.Namespace, 3*time.Minute)
 	splunkIpAddr := getPodIpAddress(t, "splunk")
 	err := os.Setenv("CI_SPLUNK_HOST", splunkIpAddr)
 	require.NoError(t, err)
@@ -410,4 +413,38 @@ func waitForJobsToComplete(t *testing.T, clientset *kubernetes.Clientset, namesp
 		require.NoError(t, err)
 		fmt.Printf("Job %s completed successfully\n", job.Name)
 	}
+}
+
+func waitForSplunkToBeReady(t *testing.T, clientset *kubernetes.Clientset, namespace string, timeout time.Duration) {
+	//podLogOptions := &corev1.PodLogOptions{}
+	//podLogOptions.Container := "splunk"
+	require.Eventually(t, func() bool {
+		logRequest := clientset.CoreV1().Pods(namespace).GetLogs("splunk", &corev1.PodLogOptions{})
+
+		// Execute the log request
+		logStream, err := logRequest.Stream(context.TODO())
+		require.NoError(t, err)
+		defer logStream.Close()
+
+		fmt.Printf("Streaming logs from pod %s in namespace %s...\n", "splunk", namespace)
+		// Read the logs and print them to stdout
+		logs, err := io.ReadAll(logStream)
+		require.NoError(t, err)
+
+		// Convert logs to a string and search for the target string
+		splunkReadyString := "Ansible playbook complete"
+		logString := string(logs)
+		if strings.Contains(logString, splunkReadyString) {
+			fmt.Printf("Found string '%s' in logs\n", splunkReadyString)
+			return true
+		} else {
+			fmt.Printf("String '%s' not found in logs\n", splunkReadyString)
+		}
+		//_, err = io.Copy(os.Stdout, logStream)
+		//if err != nil {
+		//	fmt.Printf("Error streaming logs: %v\n", err)
+		//	return
+		//}
+		return false
+	}, timeout, 5*time.Second, "Splunk is not ready")
 }
