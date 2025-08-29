@@ -651,6 +651,7 @@ logsCollection:
     #       value: server
     #     firstEntryRegex: ^[^\s].*
     #     combineWith: ""
+    #     maxNumOfLinesToCombine: 1000
     multilineConfigs: []
     # Set useSplunkIncludeAnnotation flag to `true` to collect logs from pods with `splunk.com/include: true` annotation and ignore others.
     # All other logs will be ignored.
