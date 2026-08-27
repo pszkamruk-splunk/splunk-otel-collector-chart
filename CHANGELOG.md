@@ -4,6 +4,31 @@
 <!-- For unreleased changes, see entries in .chloggen -->
 <!-- next version -->
 
+## [0.159.0] - 2026-08-27
+
+This Splunk OpenTelemetry Collector for Kubernetes release adopts the [Splunk OpenTelemetry Collector v0.159.0](https://github.com/signalfx/splunk-otel-collector/releases/tag/v0.159.0).
+
+### 🛑 Breaking changes 🛑
+
+- `chart`: Remove deprecated `image.fluentd.initContainer` configuration option. ([#1995](https://github.com/signalfx/splunk-otel-collector-chart/pull/1995))
+  This option was deprecated in version 0.38.0. The same splunk/fluentd-hec image is now used in init containers.
+  
+- `chart`: Remove deprecated `extraAttributes.podLabels` configuration option. ([#1994](https://github.com/signalfx/splunk-otel-collector-chart/pull/1994))
+  This option was deprecated in version 0.38.0 in favor of `extraAttributes.fromLabels`.
+  See migration guide: https://github.com/signalfx/splunk-otel-collector-chart/blob/main/UPGRADING.md#0371-to-0380
+  
+
+### 💡 Enhancements 💡
+
+- `agent`: Update prometheus receiver configuration for CoreDNS in OpenShift to use secure endpoint and service account token ([#2009](https://github.com/signalfx/splunk-otel-collector-chart/pull/2009))
+  - This aligns with OpenShift's default CoreDNS daemonset setup with kube-rbac-proxy which doesn't expose metrics over HTTP.
+  
+- `operator`: Bump java to v2.19.0 in helm-charts/splunk-otel-collector/values.yaml ([#1991](https://github.com/signalfx/splunk-otel-collector-chart/pull/1991))
+
+### 🧰 Bug fixes 🧰
+
+- `chart`: Fix per-pod configuration of 'metricsIndex' and 'sourcetype' config for Splunk Platform metrics via annotations ([#1977](https://github.com/signalfx/splunk-otel-collector-chart/pull/1977))
+
 ## [0.132.0] - 2025-08-21
 
 This Splunk OpenTelemetry Collector for Kubernetes release adopts the [Splunk OpenTelemetry Collector v0.132.0](https://github.com/signalfx/splunk-otel-collector/releases/tag/v0.132.0).
